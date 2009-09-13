@@ -11,6 +11,9 @@ Win32::Watir - Perl extension for automating Internet Explorer.
    visible => 1,
    maximize => 1,
  );
+ # show google, search 'Perl Win32::Watir' keyword.
+ $ie->goto("http://www.google.co.jp/");
+ $ie->text_field('name:', "q")->value("Perl Win32::Watir")
 
 =head1 DESCRIPTION
 
@@ -50,38 +53,46 @@ use Win32::OLE qw(EVENTS);
 use Win32::Watir::Element;
 use Win32::Watir::Table;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 # methods go here.
 
-=head new - construct.
+=head2 new - construct.
 
 options are supported to this method in hash format.
 
-warnings => 0 or 1
+ warnings => 0 or 1
   0: output no warning.
   1: output some warnings.
 
-maximize => 0 or 1
+ maximize => 0 or 1
   0: default window size.
   1: maximize IE window when IE start.
 
-visible => 0 or 1
+ visible => 0 or 1
   0: IE window invisible.
   1: IE window visible.
 
-codepage => undef or 'utf8'
+ codepage => undef or 'utf8'
   undef:  use default codepage at your Windows.
   utf8 :  use Win32::OLE::CP_UTF8 codepage.
+
+ ie (IE executable path) :
+  specify your multiple IE executable path.
+  ex) c:/path_to/multipleIE/iexplorer.exe
+
+ find :
+  If "find" key exists, find IE window in
+  current workspace
 
 if no options specified, use those default.
 
  $ie = new Win32::Watir(
- 	warnings => 0,
- 	maximize => 0,
- 	visible  => 1,
- 	codepage => undef,
- 	);
+   warnings => 0,
+   maximize => 0,
+   visible  => 1,
+   codepage => undef,
+ );
 
 =cut
 
@@ -102,11 +113,11 @@ sub _startIE {
 	my $self = shift;
 	defined $self->{agent} and return;
 	# set codepage
-	if ($self->{codepage} =~ /UTF8/i or $self->{codepage} =~ /UTF-8/i){
+	if ($self->{codepage} and ($self->{codepage} =~ /UTF8/i || $self->{codepage} =~ /UTF-8/i)){
 		Win32::OLE->Option(CP => Win32::OLE::CP_UTF8);
 		binmode(STDOUT, ":utf8");
 		binmode(STDERR, ":utf8");
-		print STDERR "DEBUG: Win32::OLE::CP=".Win32::OLE->Option('CP')."\n";
+		print STDERR "DEBUG: Win32::OLE::CP=".Win32::OLE->Option('CP')."\n" if ($self->{warnings});
 	}
 	$self->{agent} = Win32::OLE->new("InternetExplorer.Application") || 
 		die "Could not start Internet Explorer Application through OLE\n";
@@ -198,8 +209,10 @@ sub close {
 
 =head2 gotoURL(url)
 
- # Site navigation
- $ie->goto('http://www.google.com');
+Site navigate to specified URL.
+
+ ex). go cpan-site.
+  $ie->goto('http://search.cpan.org/');
 
 =cut
 
@@ -332,15 +345,24 @@ sub text {
 	return $self->PageText(@_);
 }
 
+=head2 link(how, value)
+
 =head2 getLink(how, value)
 
- # Finding hyperlinks and clicking them
- # Using 'linktext:' option (text of the link shown on web page)
- $ie->getLink('linktext:', "About Google")->Click;	
- # Or using 'linktext:' option with pattern matching
- $ie->getLink('linktext:', qr/About Google/)->Click;
- # Or using 'id:' option ( <a id=1a class=q href=......>)
- $ie->getLink('id:', "1a")->Click;
+Finding hyperlinks.
+
+ex).
+ Using 'linktext:' option (text of the link shown on web page)
+  $ie->getLink('linktext:', "About Google")->Click;	
+
+ Using 'linktext:' option with pattern matching
+  $ie->getLink('linktext:', qr/About Google/)->Click;
+
+ Using 'id:' option ( <a id=1a class=q href=......>)
+  $ie->getLink('id:', "1a")->Click;
+
+ Using 'href:' option ( <a href=......>)
+  $ie->getLink('id:', qr/search.cpan.org/)->click;
 
 =cut
 
@@ -360,11 +382,23 @@ sub getLink {
 	}
 	return $link_object;
 }
-
 sub link {
 	my $self = shift;
 	return $self->getLink(@_);
 }
+
+=head2 links()
+
+=head2 getAllLinks()
+
+return all array of link_object.
+
+ ex). print pagename at google search result.
+  foreach my $ln ( $ie->getAllLinks ){
+    print $ln->text."\n" if ($ln->class eq 'l');
+  }
+
+=cut
 
 sub getAllLinks {
 	my $self = shift;
@@ -379,11 +413,18 @@ sub getAllLinks {
 	}
 	return @links_array;
 }
-
 sub links {
 	my $self = shift;
 	return $self->getAllLinks();
 }
+
+=head2 button(how, what)
+
+=head2 getButton(how, what)
+
+finding input buttons.
+
+=cut
 
 sub getButton {
 	my ($self, $how, $what) = @_;
@@ -401,11 +442,18 @@ sub getButton {
 	}
 	return $button_object;
 }
-
 sub button {
 	my $self = shift;
 	return $self->getButton(@_);
 }
+
+=head2 image(how, what)
+
+=head2 getImage(how, what)
+
+finding img.
+
+=cut
 
 sub getImage {
 	my ($self, $how, $what) = @_;
@@ -423,11 +471,18 @@ sub getImage {
 	}
 	return $image_object;
 }
-
 sub image {
 	my $self = shift;
 	return $self->getImage(@_);
 }
+
+=head2 images()
+
+=head2 getAllImages()
+
+return array of all image tag.
+
+=cut
 
 sub getAllImages {
 	my $self = shift;
@@ -442,11 +497,18 @@ sub getAllImages {
 	}
 	return @image_array;
 }
-
 sub images {
 	my $self = shift;
 	return $self->getAllImages(@_);
 }
+
+=head2 radio(how, what)
+
+=head2 getRadio(how, what)
+
+return input radio object.
+
+=cut
 
 sub getRadio {
 	my ($self, $how, $what) = @_;
@@ -469,11 +531,18 @@ sub getRadio {
 	}
 	return $radio_object;
 }
-
 sub radio {
 	my $self = shift;
 	return $self->getRadio(@_);
 }
+
+=head2 checkbox(how, what)
+
+=head2 getCheckbox(how, what)
+
+return input checkbox object.
+
+=cut
 
 sub getCheckbox {
 	my ($self, $how, $what) = @_;
@@ -496,7 +565,6 @@ sub getCheckbox {
 	}
 	return $checkbox_object;
 }
-
 sub checkbox {
 	my $self = shift;
 	return $self->getCheckbox(@_);
@@ -518,11 +586,16 @@ sub getSelectList {
 	}
 	return $list_object;
 }
-
 sub select_list {
 	my $self = shift;
 	return $self->getSelectList(@_);
 }
+
+=head2 getTextBox(how, what)
+
+return input (type=text) object.
+
+=cut
 
 sub getTextBox {
 	my ($self, $how, $what) = @_;
@@ -548,15 +621,11 @@ sub getTextBox {
 	return $text_object;
 }
 
-sub text_field {
-	my ($self, $how, $what) = @_;
-	my $object = $self->getTextBox($how, $what);
-	if ($object){
-		return $object;
-	} else {
-		return $self->getTextArea($how, $what);
-	}
-}
+=head2 getTextArea(how, what)
+
+return textarea object.
+
+=cut
 
 sub getTextArea {
 	my ($self, $how, $what) = @_;
@@ -580,6 +649,20 @@ sub getTextArea {
 		$self->_log("WARNING: No text area is present in the document with your specified option $how $what\n");
 	}
 	return $text_object;
+}
+
+=head2 text_field(how, what)
+
+=cut
+
+sub text_field {
+	my ($self, $how, $what) = @_;
+	my $object = $self->getTextBox($how, $what);
+	if ($object){
+		return $object;
+	} else {
+		return $self->getTextArea($how, $what);
+	}
 }
 
 sub getTable {
@@ -760,15 +843,12 @@ sub __getObject {
 					}
 				}
 		 }
-		 
 		 else {
 			 print "WARNING: \'$how\' is not supported to get the object\n";
 		 }
-			 
 	}
 }
 
-# [ToDO]
 # * __getObject hasn't type?
 sub getFrame {
 	my ($self, $how, $what) = @_;
@@ -834,6 +914,12 @@ sub WaitforDocumentComplete {
 	}
 }
 
+=head2 autoit
+
+return AutoItX3.Control
+
+=cut
+
 sub autoit {
 	my $self = shift;
 	unless ( defined $self->{autoit} ){
@@ -853,11 +939,37 @@ sub autoit {
 	return $self->{autoit};
 }
 
+=head2 bring_to_front()
+
+make IE window active.
+
+=cut
+
+sub bring_to_front {
+	my $self = shift;
+	my $title = shift;
+	unless ($title){
+		if ($self->ie_version == 6){
+			$title = 'Microsoft Internet Explorer';
+		} elsif ($self->ie_version >= 7){
+			$title = 'Windows Internet Explorer';
+		}
+	}
+	$self->autoit->AutoItSetOption("WinTitleMatchMode", 2);
+	$self->autoit->WinActivate($title);
+	$self->autoit->AutoItSetOption("WinTitleMatchMode", 1);
+}
+
+=head2 ie_version()
+
+return IE major version (6 or 7 or 8).
+
+=cut
+
 sub ie_version {
 	my $self = shift;
 	return $self->{IE_VERSION};
 }
-
 sub _check_ie_version {
 	my $self = shift;
 	## HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Internet Explorer
@@ -921,6 +1033,12 @@ sub register_autoitx_dll {
 	Win32::RegisterServer($dll);
 }
 
+=head2 push_security_alert_yes(wait)
+
+push "Yes" button at "Security Alert" dialog window.
+
+=cut
+
 sub push_security_alert_yes {
 	my ($self, $wait) = @_;
 	$wait = 5 unless $wait;
@@ -928,69 +1046,107 @@ sub push_security_alert_yes {
 	if ( $self->ie_version == 6 ){
 		$title = 'Security Alert';
 	} else {
-		$title = 'Security Alert'; # ToDO:
+		$title = 'Security Alert'; # ToDO
 	}
-	my $window = $self->{autoit}->WinWait($title, "", $wait);
+	my $window = $self->autoit->WinWait($title, "", $wait);
 	if ($window){
-		$self->{autoit}->WinActivate("$title");
-		$self->{autoit}->Send('!y');
+		$self->autoit->WinActivate("$title");
+		$self->autoit->Send('!y');
 	} else {
 		$self->_log("WARNING: No Security Alert dialog is present. Function push_security_alert_yes is timed out.");
 	}
 }
 
+=head2 push_confirm_button_ok(title, wait)
+
+type enter key (OK) at JavaScript confirm dialog window.
+
+=cut
+
 sub push_confirm_button_ok {
 	my ($self, $title, $wait) = @_;
 	$title = 'Windows Internet Explorer' unless $title;
 	$wait = 5 unless $wait;
-	my $window = $self->{autoit}->WinWait($title, "", $wait);
+	my $window = $self->autoit->WinWait($title, "", $wait);
 	if ($window){
-		$self->{autoit}->WinActivate($title);
-		$self->{autoit}->Send('{ENTER}');
+		$self->autoit->WinActivate($title);
+		$self->autoit->Send('{ENTER}');
 	}
 }
+
+=head2 push_button_yes()
+
+push "Yes" button at JavaScript confirm dialog window.
+
+=cut
 
 sub push_button_yes {
 	my ($self, $title, $wait) = @_;
 	$title = 'Windows Internet Explorer' unless $title;
 	$wait = 5 unless $wait;
-	my $window = $self->{autoit}->WinWait($title, "", $wait);
+	my $window = $self->autoit->WinWait($title, "", $wait);
 	if ($window){
-		$self->{autoit}->WinActivate($title);
-		$self->{autoit}->Send('!y');
+		$self->autoit->WinActivate($title);
+		$self->autoit->Send('!y');
 	} else {
 		$self->_log("WARNING: No dialog is present with title: $title. Function push_button_yes is timed out.");
 	}
 }
 
-sub push_confirm_button_cancle {
+=head2 push_confirm_button_cancel(title, wait)
+
+type escape key (cancel) at JavaScript confirm dialog window.
+
+=cut
+
+sub push_confirm_button_cancel {
 	my ($self, $title, $wait) = @_;
 	$title = 'Windows Internet Explorer' unless $title;
 	$wait = 5 unless $wait;
-	my $window = $self->{autoit}->WinWait($title, "", $wait);
+	my $window = $self->autoit->WinWait($title, "", $wait);
 	if ($window){
-		$self->{autoit}->WinActivate($title);
-		$self->{autoit}->Send('{ESCAPE}');
+		$self->autoit->WinActivate($title);
+		$self->autoit->Send('{ESCAPE}');
 	}
 }
+
+=head2 logon(options)
+
+Enter username, password at Basic Auth dialog window.
+
+ options : hash
+
+  title    : dialog window title.
+  user     : username.
+  password : username.
+
+ ex)
+   $ie->goto('https://pause.perl.org/pause/authenquery', 1); ## no wait
+   $ie->logon(
+     title => "pause.perl.org へ接続",
+     user => "myname",
+     password => "mypassword",
+   );
+
+=cut
 
 sub logon {
 	my $self = shift;
 	my %opt = @_;
 	$opt{wait} = 5 unless ( $opt{wait} );
-	my $window = $self->{autoit}->WinWait($opt{title}, "", $opt{wait});
+	my $window = $self->autoit->WinWait($opt{title}, "", $opt{wait});
 	if ($window){
-		$self->{autoit}->WinActivate($opt{title});
-		$self->{autoit}->Send($opt{user});
-		$self->{autoit}->Send('{TAB}');
-		$self->{autoit}->Send($opt{password});
-		$self->{autoit}->Send('{ENTER}');
+		$self->autoit->WinActivate($opt{title});
+		$self->autoit->Send($opt{user});
+		$self->autoit->Send('{TAB}');
+		$self->autoit->Send($opt{password});
+		$self->autoit->Send('{ENTER}');
 	} else {
 		$self->_log("WARNING: No logon dialog is present with title \'$opt{title}\'. Function logon is timed out.\n");
 	}
 }
 
-=head2 maximize_ie()
+=head2 maximize_ie(title)
 
 maximize specified title window.
 
@@ -1050,16 +1206,12 @@ __END__
  Win32::OLE
  Win32::IEAutomation
 
-
 =head1 AUTHOR
 
  Kazuhito Shimizu, <kazuhito.shimizu@gmail.com>
 
-
 =head1 COPYRIGHT AND LICENSE
 
 same as Win32::IEAutomation..
-
-[ToDO] more detail..
 
 =cut

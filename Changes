@@ -7,3 +7,7 @@ Revision history for Perl extension Win32::Watir.
 0.02  Fri Sep 11 10:15:01     2009
 	- support multipleIE.
 	- support IE8.
+
+0.03  Sun Sep 13 17:35:19     2009
+	- add/modify POD.
+	- minor bugfix.

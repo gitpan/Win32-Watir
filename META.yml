@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Win32-Watir
-version:             0.02
+version:             0.03
 abstract:            Perl extension for automating Internet Explorer.
 license:             ~
 author:              

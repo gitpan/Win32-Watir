@@ -9,12 +9,19 @@ BEGIN { use_ok('Win32::Watir') };
 
 use Win32::Watir;
 
+my $codepage = undef;
+   $codepage = 'utf8' if (exists($ENV{CYGWIN}));
 my $ie = Win32::Watir->new(
 	visible => 1,
 	maximize => 1,
 	warnings => 1,
-	codepage => 'utf8',
+	codepage => $codepage,
 );
+
+## WinActivate
+sleep 5;
+$ie->bring_to_front;
+sleep 1;
 
 ## Google
 $ie->goto('http://www.google.co.jp/');
