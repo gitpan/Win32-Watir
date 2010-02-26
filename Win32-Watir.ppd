@@ -1,0 +1,11 @@
+<SOFTPKG NAME="Win32-Watir" VERSION="0,04,0,0">
+    <TITLE>Win32-Watir</TITLE>
+    <ABSTRACT>Perl extension for automating Internet Explorer.</ABSTRACT>
+    <AUTHOR>Kazuhito Shimizu &lt;kazuhito.shimizu@gmail.com&gt;</AUTHOR>
+    <IMPLEMENTATION>
+        <DEPENDENCY NAME="Win32-OLE" VERSION="0,0,0,0" />
+        <OS NAME="MSWin32" />
+        <ARCHITECTURE NAME="MSWin32-x86-multi-thread-5.10" />
+        <CODEBASE HREF="Win32-Watir-0.04.tar.gz" />
+    </IMPLEMENTATION>
+</SOFTPKG>

@@ -53,7 +53,7 @@ use Win32::OLE qw(EVENTS);
 use Win32::Watir::Element;
 use Win32::Watir::Table;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 # methods go here.
 
@@ -109,20 +109,24 @@ sub new {
 	}
 }
 
-sub _startIE {
+sub _set_codepage {
 	my $self = shift;
-	defined $self->{agent} and return;
-	# set codepage
 	if ($self->{codepage} and ($self->{codepage} =~ /UTF8/i || $self->{codepage} =~ /UTF-8/i)){
 		Win32::OLE->Option(CP => Win32::OLE::CP_UTF8);
 		binmode(STDOUT, ":utf8");
 		binmode(STDERR, ":utf8");
 		print STDERR "DEBUG: Win32::OLE::CP=".Win32::OLE->Option('CP')."\n" if ($self->{warnings});
 	}
+}
+
+sub _startIE {
+	my $self = shift;
+	defined $self->{agent} and return;
 	$self->{agent} = Win32::OLE->new("InternetExplorer.Application") || 
 		die "Could not start Internet Explorer Application through OLE\n";
 	Win32::OLE->Option(Warn => 0);
 	Win32::OLE->WithEvents($self->{agent});
+	$self->_set_codepage();
 	$self->{agent}->{Visible} = $self->{visible};
 	$self->{IE_VERSION} = $self->_check_ie_version();
 	if ($self->{maximize}){
@@ -140,7 +144,7 @@ sub _startCustomIE {
 	if ( exists($self->{ie}) ){
 		my $ie = $self->{ie};
 		die "Error: Coud not execute '$ie'\n" unless ( -x "$ie" );
-		if ( exists($ENV{CYGWIN}) ){
+		if ( exists($ENV{OSTYPE}) && $ENV{OSTYPE} eq 'cygwin' ){
 			system("cygstart.exe '${ie}'");
 		} else {
 			system("start '${ie}'");
@@ -169,6 +173,7 @@ sub _startCustomIE {
 		sleep 2;
 	}
 	die "Could not start or detect Internet Explorer\n" unless(defined($self->{agent}));
+	$self->_set_codepage();
 	$self->{IE_VERSION} = $self->_check_ie_version() unless ($self->{IE_VERSION});
 	$self->{agent}->{Visible} = $self->{visible};
 	if ($self->{maximize}){
@@ -187,9 +192,9 @@ sub getElement {
 	$self->{element};
 }
 
-=head2 close
+=head2 close()
 
-=head2 closeIE
+=head2 closeIE()
 
 close IE window.
 
@@ -278,9 +283,9 @@ sub URL {
 	$agent->LocationURL;
 }
 
-=head2 title
+=head2 title()
 
-=head2 Title
+=head2 Title()
 
 return current page title.
 
@@ -296,9 +301,9 @@ sub title {
 	return $self->Title(@_);
 }
 
-=head2 html
+=head2 html()
 
-=head2 Content
+=head2 Content()
 
 return current page html.
 
@@ -322,12 +327,33 @@ sub html {
 	return $self->Content(@_);
 }
 
+=head2 VerifyText(text, flag)
+
+verify current document include specified "text" .
+
+ text : string
+ flag :
+ 	0 (default)
+ 	1 (?)
+ 
+ [ToDO] check createTextRange()
+
+=cut
+
 sub VerifyText {
 	my ($self, $string, $flag) = @_;
 	$flag = 0 unless $flag;
 	my $textrange = $self->{agent}->document->body->createTextRange;
 	return $textrange->findText($string, 0 , $flag);
 }
+
+=head2 PageText()
+
+=head2 text()
+
+return current page as Plain TEXT which removed HTML tags.
+
+=cut
 
 sub PageText {
 	my $self = shift;
@@ -339,7 +365,6 @@ sub PageText {
 		return $text;
 	}
 }
-
 sub text {
 	my $self = shift;
 	return $self->PageText(@_);
@@ -702,14 +727,40 @@ sub getAllTables {
 	}
 	return @links_array;
 }
-	
+
+
+=head2 getAllDivs()
+
+return all array of div tag.
+
+=cut
+
+sub getAllDivs {
+	my $self = shift;
+	my $agent = $self->{agent};
+	my @divs_array;
+	my $divs = $agent->Document->divs;
+	for (my $n = 0; $n <= $divs->length - 1; $n++){
+		my $link_object = Win32::Watir::Element->new();
+		$link_object->{element} = $divs->item($n);
+		$link_object->{parent} = $self;
+		push (@divs_array, $link_object);
+	}
+	return @divs_array;
+}
+sub divs {
+	my $self = shift;
+	return $self->getAllDivs();
+}
+
 sub __getObject {
 	my ($coll, $how, $what, $type) = @_;
 	my ($aftertext_flag, $input, $index_counter, $regex_flag);
+	my @_re = ();
 	$index_counter = 0 unless (defined $index_counter);
 	$regex_flag = 1 if (ref($what) eq 'Regexp');
 	for (my $n = 0; $n <= $coll->length - 1; $n++){
-		
+
 			if ($how eq "linktext:" or $how eq 'text:') {
 				my $text = $coll->item($n)->outerText;
 				$text = trim_white_spaces($text);
@@ -719,7 +770,7 @@ sub __getObject {
 					return $coll->item($n) if ($text eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "tabtext:") {
 				my $text = $coll->item($n)->outerText;
 				$text = trim_white_spaces($text);
@@ -729,12 +780,12 @@ sub __getObject {
 					return $coll->item($n) if ($text eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "id:") {
 				my $id = $coll->item($n)->id;
 				return $coll->item($n) if ($id eq $what);
 			}
-			
+
 			elsif ($how eq "name:") {
 				my $name = $coll->item($n)->name;
 				if ($regex_flag){
@@ -743,7 +794,7 @@ sub __getObject {
 					return $coll->item($n) if ($name eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "value:") {
 				my $value = $coll->item($n)->value;
 				if ($regex_flag){
@@ -752,21 +803,28 @@ sub __getObject {
 					return $coll->item($n) if ($value eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "class:") {
 				my $class = $coll->item($n)->{className};
 				if ($regex_flag){
-					return $coll->item($n) if ($class =~ $what);
+					if ($class =~ $what){
+						if (wantarray){
+							push(@_re,$coll->item($n));
+							next;
+						} else {
+							return $coll->item($n);
+						}
+					}
 				} else {
 					return $coll->item($n) if ($class eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "index:") {
 				$index_counter++ if ($coll->item($n)->type =~ m/^($type)$/);
 				return $coll->item($n) if ($index_counter == $what);
 			}
-			
+
 			elsif ($how eq "caption:") {
 				my $value = $coll->item($n)->value;
 				if ($regex_flag){
@@ -775,7 +833,7 @@ sub __getObject {
 					return $coll->item($n) if ($value eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "linkurl:" or $how eq 'url:' or $how eq 'href') {
 				my $url = $coll->item($n)->href;
 				if ($regex_flag){
@@ -784,7 +842,7 @@ sub __getObject {
 					return $coll->item($n) if ($url eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "imgurl:" or $how eq 'src:') {
 				my $imgurl = $coll->item($n)->src;
 				if ($regex_flag){
@@ -793,7 +851,7 @@ sub __getObject {
 					return $coll->item($n) if ($imgurl eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "alt:") {
 				my $imgurl = $coll->item($n)->alt;
 				if ($regex_flag){
@@ -802,7 +860,7 @@ sub __getObject {
 					return $coll->item($n) if ($imgurl eq $what);
 				}
 			}
-			
+
 			elsif ($how eq "beforetext:") {
 				$input =  $coll->item($n) if ($coll->item($n)->tagname eq "INPUT");
 				my $text = $coll->item($n)->getAdjacentText("beforeEnd");
@@ -820,7 +878,7 @@ sub __getObject {
 					return $input if ($text eq $what);
 				}			 
 			}
-			
+
 			elsif ($how eq "aftertext:") {
 				undef $input;
 				$input =  $coll->item($n) if (($coll->item($n)->tagName =~ m/^(INPUT|TEXTAREA)$/) && $coll->item($n)->type =~ m/^($type)$/);
@@ -842,11 +900,13 @@ sub __getObject {
 						$aftertext_flag = 1 if ($text eq $what);
 					}
 				}
-		 }
-		 else {
-			 print "WARNING: \'$how\' is not supported to get the object\n";
-		 }
+		 	}
+
+			else {
+				print "WARNING: \'$how\' is not supported to get the object\n";
+			}
 	}
+	return @_re;
 }
 
 # * __getObject hasn't type?
@@ -1170,9 +1230,67 @@ sub maximize_ie {
 	return 1;
 }
 
+=head2 delete_cookie()
+
+delete IE cookies.
+
+=cut
+
+sub delete_cookie {
+	my $self = shift;
+	my $folder = Win32::GetFolderPath(Win32::CSIDL_COOKIES, undef);
+	opendir(my $_dh,"$folder") or die $@;
+	my @files = grep { /^\w+/ && -w "$folder\\$_" } readdir($_dh);
+	my $deleted = 0;
+	foreach my $_f (@files){
+		next if ($_f =~ /desktop\.ini$/i);
+		if ( unlink("$folder\\$_f") ){
+			$deleted++;
+			print STDERR "DEBUG: delete_cookie(): $folder\\$_f\n" if ($self->{warnings});
+		}
+	}
+	closedir($_dh);
+	return $deleted;
+}
+
+=head2 delete_cache()
+
+delete IE caches.
+
+=cut
+
+sub delete_cache {
+	my $self = shift;
+	my $folder = Win32::GetFolderPath(Win32::CSIDL_INTERNET_CACHE, undef);
+	opendir(my $_dh,"$folder") or die $@;
+	my @files = grep { /^\w+/ && -w "$folder\\$_" } readdir($_dh);
+	my $deleted = 0;
+	foreach my $i (@files){
+		next if ($i =~ /desktop\.ini$/i);
+		if ( -f "$folder\\$i" ){
+			if ( unlink("$folder\\$i") ){
+				$deleted++;
+				print STDERR "DEBUG: delete_cache(): $folder\\$i\n" if ($self->{warnings});
+			} else {
+				print STDERR "DEBUG: delete_cache(): can't delete $folder\\$i\n" if ($self->{warnings});
+			}
+		} elsif ( -d "$folder\\$i" ){
+			if ( rmdir("$folder\\$i") ){
+				$deleted++;
+			} else {
+				print STDERR "DEBUG: delete_cache(): can't delete $folder\\$i\n" if ($self->{warnings});
+			}
+		} else {
+			print STDERR "DEBUG: delete_cache(): skipped - $folder\\$i\n";
+		}
+	}
+	closedir($_dh);
+	return $deleted;
+}
+
 =head2 trim_white_spacs()
 
- return string - trim \s+
+return string - trim \s+
 
 =cut
 
@@ -1182,6 +1300,13 @@ sub trim_white_spaces {
 	$string =~ s/\s+$//;
 	return $string;
 }
+
+=head2 _log(string)
+
+private method for testing.
+use only with t/*.t test.
+
+=cut
 
 sub _log {
 	my $self = shift;

@@ -204,7 +204,7 @@ sub clear {
 }
 
 sub trim_white_spaces {
-	if (ref($_[0]) eq 'Win32::Watir'){
+	if (ref($_[0]) =~ /^Win32::Watir/){
 		my $self = shift;
 	}
 	my $string = shift;

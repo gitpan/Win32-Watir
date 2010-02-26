@@ -1,11 +1,11 @@
 --- #YAML:1.0
 name:                Win32-Watir
-version:             0.03
+version:             0.04
 abstract:            Perl extension for automating Internet Explorer.
 license:             ~
 author:              
     - Kazuhito Shimizu <kazuhito.shimizu@gmail.com>
-generated_by:        ExtUtils::MakeMaker version 6.44
+generated_by:        ExtUtils::MakeMaker version 6.42_01
 distribution_type:   module
 requires:     
     Win32::OLE:                    0
