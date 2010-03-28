@@ -53,7 +53,7 @@ use Win32::OLE qw(EVENTS);
 use Win32::Watir::Element;
 use Win32::Watir::Table;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 # methods go here.
 
@@ -1067,16 +1067,22 @@ sub _check_ie_version {
 
 sub _find_autoitx_dll {
 	my $self = shift;
-	foreach my $libdir (@INC){
+	my $dllname = "AutoItX3.dll";
+#	if ( $^O /MSWin64/ ){ # ToDO: how to get 64bit or not...?!
+#		$dllname = "AutoItX3_64.dll";
+#	}
+	foreach my $libdir (@INC)
+	{
 		if ( $libdir =~ /^\/cygdrive\/(\w+)\/(.*)$/i ){
 			$libdir = "${1}:/${2}";
 		}
-		my $dllpath = "$libdir/Win32/Watir/AutoItX3.dll";
+		my $dllpath = "$libdir/Win32/Watir/$dllname";
 		if ( -e "$dllpath" ){
 			$self->_log("DEBUG: _find_autoitx_dll: $dllpath");
 			return $dllpath;
 		}
 	}
+	return "";
 }
 
 =head2 register_autoitx_dll(dll_path)
@@ -1266,7 +1272,7 @@ sub delete_cache {
 	my @files = grep { /^\w+/ && -w "$folder\\$_" } readdir($_dh);
 	my $deleted = 0;
 	foreach my $i (@files){
-		next if ($i =~ /desktop\.ini$/i);
+		next if (-d "$folder\\$i" or $i =~ /desktop\.ini$/i);
 		if ( -f "$folder\\$i" ){
 			if ( unlink("$folder\\$i") ){
 				$deleted++;

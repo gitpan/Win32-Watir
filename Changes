@@ -16,4 +16,6 @@ Revision history for Perl extension Win32::Watir.
 	- Windows Vista + IE8 support.
 	- more compatible methods.
 
-
+0.05
+	- fix broken AutoItX3.dll
+	- remove some invalid tests

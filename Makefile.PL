@@ -6,6 +6,7 @@ WriteMakefile(
     NAME              => 'Win32::Watir',
     VERSION_FROM      => 'lib/Win32/Watir.pm', # finds $VERSION
     PREREQ_PM         => {
+        'Win32'      => 0,
         'Win32::OLE' => 0,
     }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005

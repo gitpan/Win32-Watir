@@ -6,7 +6,7 @@ t/01.IE_default.t
 lib/Win32/Watir.pm
 lib/Win32/Watir/AutoItX.chm
 lib/Win32/Watir/AutoItX3.dll
+lib/Win32/Watir/AutoItX3_x64.dll
 lib/Win32/Watir/Element.pm
 lib/Win32/Watir/Table.pm
-Win32-Watir.ppd
 META.yml                                 Module meta-data (added by MakeMaker)
