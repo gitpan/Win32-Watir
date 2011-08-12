@@ -1,4 +1,4 @@
-Win32-Watir version 0.05
+Win32-Watir version 0.06
 ========================
 
 INSTALLATION
@@ -23,6 +23,7 @@ This module requires these other modules and libraries:
 
  Win32
  Win32::OLE
+ Config
 
 if you want to use with IE 6.0 requires..
 
@@ -31,4 +32,4 @@ if you want to use with IE 6.0 requires..
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2009 by Kazuhito Shimizu
+Copyright (C) 2011 by Kazuhito Shimizu

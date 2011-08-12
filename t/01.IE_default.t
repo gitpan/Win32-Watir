@@ -3,7 +3,10 @@
 #
 
 use Test::More 'no_plan';
-BEGIN { use_ok('Win32::Watir') };
+BEGIN {
+	$| = 1;
+	use_ok('Win32::Watir');
+};
 
 #########################
 
@@ -20,20 +23,21 @@ my $ie = Win32::Watir->new(
 
 ## clear cookie and cache.
 ok  ($ie->delete_cookie() >= 0, 'delete_cookie() method.');
-ok  ($ie->delete_cache()  >= 0, 'delete_cookie() method.');
+ok  ($ie->delete_cache()  >= 0, 'delete_cache() method.');
 
 ## WinActivate
-sleep 5;
+sleep 3;
 $ie->bring_to_front;
-sleep 1;
+sleep 3;
 
 ## Google
 $ie->goto('http://www.google.co.jp/');
+sleep 3;
 is  ($ie->URL, 'http://www.google.co.jp/', 'goto www.google.co.jp');
 
 $ie->text_field('name:', 'q')->SetValue('Perl Win32::Watir');
-$ie->button('index:', 1)->click;
-ok  ($ie->URL =~ /search?/i, 'google search');
+$ie->button('name:', "btnG")->click;
+ok  ($ie->URL =~ /\&q=Perl/i, 'google search');
 
 my $i = 1;
 foreach my $link ( $ie->getAllLinks() ){

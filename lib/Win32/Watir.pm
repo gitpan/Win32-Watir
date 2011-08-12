@@ -13,7 +13,7 @@ Win32::Watir - Perl extension for automating Internet Explorer.
  );
  # show google, search 'Perl Win32::Watir' keyword.
  $ie->goto("http://www.google.co.jp/");
- $ie->text_field('name:', "q")->value("Perl Win32::Watir")
+ $ie->text_field('name:', "q")->setvalue("Perl Win32::Watir")
 
 =head1 DESCRIPTION
 
@@ -52,8 +52,9 @@ use Win32;
 use Win32::OLE qw(EVENTS);
 use Win32::Watir::Element;
 use Win32::Watir::Table;
+use Config;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 # methods go here.
 
@@ -102,6 +103,7 @@ sub new {
 	$opts{visible} = 1  unless (exists $opts{visible});
 	$warn = $opts{warnings} if (exists $opts{warnings});
 	my $self = bless (\%opts, $class);
+	$self->_check_os_name();
 	if ( $opts{'ie'} or $opts{'find'} ){
 		return $self->_startCustomIE();
 	} else {
@@ -926,23 +928,42 @@ sub getFrame {
 		$self->_log("WARNING: No frame is present in the document with your specified option $how $what\n");
 	}
 }
-
 sub frame {
 	my $self = shift;
 	return $self->getFrame(@_);
 }
 
+sub getAllFrames {
+	my $self = shift;
+	my $agent = $self->{agent};
+	my @frames_array;
+	my $frames = $agent->Document->frames;
+
+	for (my $n = 0; $n <= $frames->length - 1; $n++){
+		my %frame = %{$self};
+		my $frameref = \%frame;
+		$frameref->{agent} = $frames->item($n);
+		bless $frameref;
+		push(@frames_array, $frameref);
+	}
+	return @frames_array;
+}
+sub frames {
+	my $self = shift;
+	return $self->getAllFrames(@_);
+}
+
 sub getPopupWindow {
 	my $self = shift;
 	my ($what, $wait) = @_;
-	my $counter;
+	my $counter = 0;
 	$wait = 2 unless $wait;
 	while($counter <= $wait ){
 		my $shApp = Win32::OLE->new("Shell.Application") || die "Could not start Shell.Application\n";
 		my $windows = $shApp->Windows;
 		for (my $n = 0; $n <= $windows->count - 1; $n++){
 			my $window = $windows->Item($n);
-			my $title = $window->document->title if $window;
+			my $title = $window->document->title if ($window && defined $window->document);
 			if ($title eq $what){
 				my %popup = %{$self};
 				my $popupref = \%popup;
@@ -990,9 +1011,9 @@ sub autoit {
 		if ($autoitx_dll){
 			register_autoitx_dll($autoitx_dll);
 			$self->{autoit} = Win32::OLE->new("AutoItX3.Control") || 
-			die "Could not start AutoItX3 Control through OLE\n";
+			die "Could not start AutoItX3.Control through OLE\n";
 		} else {
-			$self->_log("Error: AutoItX3.dll is not present in the module.");
+			$self->_log("Error: AutoItX3.Control is not present in the module.");
 			exit 1;
 		}
 	}
@@ -1057,6 +1078,9 @@ sub _check_ie_version {
 		}
 		elsif ($_major_ver >= 8.0 && $_major_ver < 9.0){
 			return 8;
+		}
+		elsif ($_major_ver >= 9.0 && $_major_ver < 10.0){
+			return 9;
 		} else {
 			die "Unknown Internet Explorer VERSION - '$_ver'\n";
 		}
@@ -1065,12 +1089,19 @@ sub _check_ie_version {
 	}
 }
 
+sub _check_os_name {
+	my $self = shift;
+	unless ( exists($self->{OS_NAME}) ){
+		$self->{OS_NAME} = Win32::GetOSName();
+	}
+	print STDERR "DEBUG: _check_os_name(): ".$self->{OS_NAME}."\n" if ($self->{warnings});
+	return $self->{OS_NAME};
+}
+
 sub _find_autoitx_dll {
 	my $self = shift;
 	my $dllname = "AutoItX3.dll";
-#	if ( $^O /MSWin64/ ){ # ToDO: how to get 64bit or not...?!
-#		$dllname = "AutoItX3_64.dll";
-#	}
+	   $dllname = "AutoItX3_x64.dll" if ( $Config{'archname'} =~ /MSWin32-x64/ );
 	foreach my $libdir (@INC)
 	{
 		if ( $libdir =~ /^\/cygdrive\/(\w+)\/(.*)$/i ){
@@ -1096,12 +1127,22 @@ Register specified dll to Server.
 sub register_autoitx_dll {
 	my $self = shift if (ref($_[0]) eq 'Win32::Watir');
 	my $dll = shift;
-	Win32::RegisterServer($dll);
+	my $_tit = "Attension: Registering AutoItX.Control";
+	my $_msg = "Win32::Watir require AutoItX.Control, register AutoItX now?\r\n".
+		"You must be Administrator (or 'administrator mode').";
+	my $_ret = msgbox("$_tit","$_msg",4);
+	if ($_ret == 6){
+		Win32::RegisterServer($dll);
+	} else {
+		msgbox("$_tit","registration canceled, script exit.",0);
+	}
 }
 
 =head2 push_security_alert_yes(wait)
 
 push "Yes" button at "Security Alert" dialog window.
+
+ wait: number of sec, for waiting.
 
 =cut
 
@@ -1293,6 +1334,43 @@ sub delete_cache {
 	closedir($_dh);
 	return $deleted;
 }
+
+
+=head2 msgbox(title, message, mode)
+
+show PopUp dialog window.
+
+ title  : dialog window title.
+ message: messages.
+ mode   : mode of buttons:
+ .      0 = OK
+ .      1 = OK and Cancel
+ .      2 = Abort, Retry, and Ignore
+ .      3 = Yes, No and Cancel
+ .      4 = Yes and No
+ .      5 = Retry and Cancel
+ return values:
+ .      0  Error
+ .      1  OK
+ .      2  Cancel
+ .      3  Abort
+ .      4  Retry
+ .      5  Ignore
+ .      6  Yes
+ .      7  No
+
+see more detail: http://search.cpan.org/perldoc?Win32
+
+=cut
+
+sub msgbox {
+	my $title = shift;
+	my $message = shift;
+	my $mode = shift || 0;
+	my $_ret = Win32::MSgBox($message,$mode,$title);
+	return $_ret;
+}
+
 
 =head2 trim_white_spacs()
 

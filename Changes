@@ -19,3 +19,12 @@ Revision history for Perl extension Win32::Watir.
 0.05
 	- fix broken AutoItX3.dll
 	- remove some invalid tests
+
+0.06
+	- add AutItX3_x64.dll
+	- dll registration fix on x86_64 Windows.
+	- Windows7 + IE9 support partially.
+	- fix https://rt.cpan.org/Public/Bug/Display.html?id=69607
+	  (thanks Sergey Parubochiy)
+	- some minor bug fix.
+

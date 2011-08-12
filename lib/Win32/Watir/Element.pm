@@ -86,7 +86,6 @@ sub click {
 sub click_nowait {
 	my ($self, $nowait) = @_;
 	$self->{element}->click;
-	$self->{parent}->WaitforDone;
 }
 sub click_no_wait {
 	my $self = shift;
@@ -184,12 +183,20 @@ sub set {
 	my $self = shift;
 	return $self->SetValue(@_);
 }
+sub setvalue {
+	my $self = shift;
+	return $self->SetValue(@_);
+}
 
 sub GetValue {
 	my $self = shift;
 	return $self->{element}->{value};
 }
 sub value {
+	my $self = shift;
+	return $self->{element}->{value};
+}
+sub getvalue {
 	my $self = shift;
 	return $self->{element}->{value};
 }
